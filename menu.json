@@ -1,0 +1,26 @@
+[
+  {
+    "id": "home",
+    "label": "Recettes",
+    "icon": "ph-cookbook",
+    "link": "index.html"
+  },
+  {
+    "id": "plan",
+    "label": "Planification",
+    "icon": "ph-calendar-plus",
+    "link": "planification.html"
+  },
+  {
+    "id": "shopping",
+    "label": "Liste de courses",
+    "icon": "ph-shopping-cart",
+    "link": "course.html"
+  },
+  {
+    "id": "settings",
+    "label": "Paramètres",
+    "icon": "ph-gear",
+    "link": "settings.html"
+  }
+]
