@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes Recettes</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --primary: #10b981; --bg: #f3f4f6; --surface: #ffffff;
+            --text: #1f2937; --text-muted: #6b7280; --border: #e5e7eb;
+        }
+        [data-theme="dark"] {
+            --bg: #111827; --surface: #1f2937; --text: #f9fafb;
+            --text-muted: #9ca3af; --border: #374151;
+        }
+        body { background: var(--bg); color: var(--text); margin: 0; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; }
+        a { text-decoration: none; color: inherit; }
+        .sidebar { width: 250px; background: #111827; color: white; position: fixed; height: 100vh; left: 0; top: 0; padding: 1.5rem; display: flex; flex-direction: column; }
+        .sidebar h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .nav-item { padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; transition: 0.2s; display: flex; gap: 0.8rem; align-items: center; color: #9ca3af; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .main-content { margin-left: 250px; padding: 2rem; flex: 1; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+        .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: #fee2e2; color: #ef4444; }
+        .tag { padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
+        .tag-plat { background: #d1fae5; color: #065f46; }
+        .tag-dessert { background: #fee2e2; color: #991b1b; }
+        @media(max-width: 768px) { .sidebar { transform: translateX(-100%); z-index: 100; transition: 0.3s; } .sidebar.active { transform: translateX(0); } .main-content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <h2><i class="ph ph-chef-hat"></i> CuisineConnect</h2>
+        <div id="nav-container"></div>
+    </nav>
+
+    <main class="main-content">
+        <header style="display:flex; justify-content:space-between; align-items:center;">
+            <button id="menu-toggle" style="background:none; border:none; font-size:1.5rem; cursor:pointer;"><i class="ph ph-list"></i></button>
+            <h1>Mes Recettes</h1>
+            <a href="editor.html" class="btn btn-primary"><i class="ph ph-plus"></i> Nouvelle</a>
+        </header>
+
+        <div class="grid" id="recipe-grid" style="margin-top: 2rem;">
+            <!-- Les recettes s'affichent ici -->
+        </div>
+    </main>
+
+    <script>
+        // --- FONCTIONS COMMUNES ---
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+        async function loadMenu() {
+            try {
+                const response = await fetch('menu.json');
+                const menuItems = await response.json();
+                const container = document.getElementById('nav-container');
+                const currentPath = window.location.pathname.split('/').pop();
+                container.innerHTML = menuItems.map(item => `
+                    <a href="${item.link}" class="nav-item ${item.link === currentPath ? 'active' : ''}">
+                        <i class="ph ${item.icon}"></i> ${item.label}
+                    </a>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+        async function getRecipes() {
+            const localData = localStorage.getItem('recipes');
+            if (localData) return JSON.parse(localData);
+            try {
+                const res = await fetch('recipes.json');
+                const data = await res.json();
+                localStorage.setItem('recipes', JSON.stringify(data));
+                return data;
+            } catch (e) { return []; }
+        }
+        function saveRecipes(recipes) { localStorage.setItem('recipes', JSON.stringify(recipes)); }
+
+        // --- LOGIQUE SPÉCIFIQUE ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            initTheme();
+            loadMenu();
+            document.getElementById('menu-toggle').onclick = () => document.querySelector('.sidebar').classList.toggle('active');
+
+            const grid = document.getElementById('recipe-grid');
+            const recipes = await getRecipes();
+
+            if (recipes.length === 0) grid.innerHTML = '<p>Aucune recette trouvée.</p>';
+            
+            grid.innerHTML = recipes.map(r => `
+                <div class="card">
+                    <span class="tag tag-${r.type}">${r.type}</span>
+                    <h3>${r.name}</h3>
+                    <p style="color:var(--text-muted); font-size:0.9rem;">
+                        <i class="ph ph-clock"></i> ${r.time} min | <i class="ph ph-users"></i> ${r.servings} pers.
+                    </p>
+                    <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+                        <a href="editor.html?id=${r.id}" class="btn btn-secondary" style="font-size:0.8rem;">Éditer</a>
+                        <button onclick="deleteRecipe('${r.id}')" class="btn btn-danger" style="font-size:0.8rem;"><i class="ph ph-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+
+            window.deleteRecipe = async (id) => {
+                if(confirm('Supprimer ?')) {
+                    let recipes = await getRecipes();
+                    recipes = recipes.filter(r => r.id !== id);
+                    saveRecipes(recipes);
+                    location.reload();
+                }
+            };
+        });
+    </script>
+</body>
+</html>
