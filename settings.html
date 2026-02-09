@@ -6,29 +6,26 @@
     <title>Paramètres</title>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <style>
-        :root {
-            --primary: #10b981; --bg: #f3f4f6; --surface: #ffffff;
-            --text: #1f2937; --text-muted: #6b7280; --border: #e5e7eb;
-        }
-        [data-theme="dark"] {
-            --bg: #111827; --surface: #1f2937; --text: #f9fafb;
-            --text-muted: #9ca3af; --border: #374151;
-        }
-        body { background: var(--bg); color: var(--text); margin: 0; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; }
+        :root { --primary: #10b981; --bg: #f3f4f6; --surface: #ffffff; --text: #1f2937; --text-muted: #6b7280; --border: #e5e7eb; }
+        [data-theme="dark"] { --bg: #111827; --surface: #1f2937; --text: #f9fafb; --text-muted: #9ca3af; --border: #374151; }
+        body { background: var(--bg); color: var(--text); margin: 0; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; overflow-x: hidden; }
         a { text-decoration: none; color: inherit; }
-        .sidebar { width: 250px; background: #111827; color: white; position: fixed; height: 100vh; left: 0; top: 0; padding: 1.5rem; display: flex; flex-direction: column; }
+        .sidebar { width: 280px; background: #111827; color: white; position: fixed; height: 100vh; left: 0; top: 0; padding: 1.5rem; display: flex; flex-direction: column; transform: translateX(-100%); transition: transform 0.3s ease; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .sidebar.active { transform: translateX(0); }
         .sidebar h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
         .nav-item { padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; transition: 0.2s; display: flex; gap: 0.8rem; align-items: center; color: #9ca3af; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
-        .main-content { margin-left: 250px; padding: 2rem; flex: 1; }
+        .main-content { margin-left: 0; padding: 2rem; flex: 1; transition: margin-left 0.3s ease; }
         .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; }
         .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
         .btn-danger { background: #fee2e2; color: #ef4444; }
-        @media(max-width: 768px) { .sidebar { transform: translateX(-100%); z-index: 100; transition: 0.3s; } .sidebar.active { transform: translateX(0); } .main-content { margin-left: 0; } }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
+        .overlay.active { display: block; }
     </style>
 </head>
 <body>
+    <div class="overlay" id="overlay"></div>
     <nav class="sidebar">
         <h2><i class="ph ph-chef-hat"></i> CuisineConnect</h2>
         <div id="nav-container"></div>
@@ -47,21 +44,15 @@
                 <button onclick="toggleTheme()" class="btn btn-secondary">Changer le thème</button>
             </div>
             <hr style="border:0; border-top:1px solid var(--border); margin: 1rem 0;">
-            
             <h3>Données</h3>
-            <p style="color:var(--text-muted); font-size:0.9rem;">
-                Pour réinitialiser toutes vos données (recettes créées, planification), cliquez ci-dessous.
-            </p>
+            <p style="color:var(--text-muted); font-size:0.9rem;">Pour réinitialiser toutes vos données (recettes créées, planification), cliquez ci-dessous.</p>
             <button onclick="clearData()" class="btn btn-danger" style="margin-top:0.5rem;">Tout effacer</button>
         </div>
     </main>
 
     <script>
-        // --- FONCTIONS COMMUNES ---
-        function initTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            document.body.setAttribute('data-theme', savedTheme);
-        }
+        // --- COMMUN ---
+        function initTheme() { const savedTheme = localStorage.getItem('theme') || 'light'; document.body.setAttribute('data-theme', savedTheme); }
         function toggleTheme() {
             const current = document.body.getAttribute('data-theme');
             const next = current === 'dark' ? 'light' : 'dark';
@@ -69,19 +60,25 @@
             localStorage.setItem('theme', next);
         }
         async function loadMenu() {
-            const res = await fetch('menu.json'); const items = await res.json();
+            try { const res = await fetch('menu.json'); const items = await res.json();
             document.getElementById('nav-container').innerHTML = items.map(i => 
                 `<a href="${i.link}" class="nav-item ${i.link === 'settings.html' ? 'active' : ''}"><i class="ph ${i.icon}"></i> ${i.label}</a>`
-            ).join('');
+            ).join(''); } catch(e){}
         }
 
-        // --- LOGIQUE SPÉCIFIQUE ---
+        // --- MENU JS ---
         document.addEventListener('DOMContentLoaded', () => {
-            initTheme();
-            loadMenu();
-            document.getElementById('menu-toggle').onclick = () => document.querySelector('.sidebar').classList.toggle('active');
+            initTheme(); loadMenu();
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('overlay');
+            const toggle = document.getElementById('menu-toggle');
+            const closeMenu = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
+            const openMenu = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
+            toggle.onclick = () => { if(sidebar.classList.contains('active')) closeMenu(); else openMenu(); };
+            overlay.onclick = closeMenu;
         });
 
+        // --- SPECIFIQUE ---
         function clearData() {
             if(confirm("Attention : cela effacera toutes vos modifications locales. Continuer ?")) {
                 localStorage.clear();
