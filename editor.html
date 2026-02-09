@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Éditeur</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --primary: #10b981; --bg: #f3f4f6; --surface: #ffffff;
+            --text: #1f2937; --text-muted: #6b7280; --border: #e5e7eb;
+        }
+        [data-theme="dark"] {
+            --bg: #111827; --surface: #1f2937; --text: #f9fafb;
+            --text-muted: #9ca3af; --border: #374151;
+        }
+        body { background: var(--bg); color: var(--text); margin: 0; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; }
+        a { text-decoration: none; color: inherit; }
+        .sidebar { width: 250px; background: #111827; color: white; position: fixed; height: 100vh; left: 0; top: 0; padding: 1.5rem; display: flex; flex-direction: column; }
+        .sidebar h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .nav-item { padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; transition: 0.2s; display: flex; gap: 0.8rem; align-items: center; color: #9ca3af; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .main-content { margin-left: 250px; padding: 2rem; flex: 1; }
+        .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: #fee2e2; color: #ef4444; }
+        input, select, textarea { width: 100%; padding: 0.7rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); margin-bottom: 1rem; }
+        @media(max-width: 768px) { .sidebar { transform: translateX(-100%); z-index: 100; transition: 0.3s; } .sidebar.active { transform: translateX(0); } .main-content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <h2><i class="ph ph-chef-hat"></i> CuisineConnect</h2>
+        <div id="nav-container"></div>
+    </nav>
+
+    <main class="main-content">
+        <header>
+            <button id="menu-toggle" style="background:none; border:none; font-size:1.5rem; cursor:pointer;"><i class="ph ph-list"></i></button>
+            <h1 id="form-title">Créer une recette</h1>
+        </header>
+
+        <div class="card" style="max-width: 800px; margin: 2rem auto;">
+            <form id="recipe-form">
+                <input type="hidden" id="inp-id">
+                <label>Nom</label>
+                <input type="text" id="inp-name" required>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label>Type</label>
+                        <select id="inp-type">
+                            <option value="entree">Entrée</option>
+                            <option value="plat">Plat</option>
+                            <option value="dessert">Dessert</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Temps (min)</label>
+                        <input type="number" id="inp-time" required>
+                    </div>
+                </div>
+                <label>Personnes</label>
+                <input type="number" id="inp-servings" value="4" required>
+                <label>Ingrédients</label>
+                <div id="ingredients-list"></div>
+                <button type="button" class="btn btn-secondary" style="margin-bottom:1rem;" onclick="addIngRow()">+ Ajouter ingrédient</button>
+                <label>Étapes</label>
+                <textarea id="inp-steps" rows="5" required></textarea>
+                <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                    <a href="index.html" class="btn btn-secondary">Annuler</a>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        // --- FONCTIONS COMMUNES ---
+        async function loadMenu() {
+            const res = await fetch('menu.json'); const items = await res.json();
+            document.getElementById('nav-container').innerHTML = items.map(i => 
+                `<a href="${i.link}" class="nav-item ${i.link === 'editor.html' ? 'active' : ''}"><i class="ph ${i.icon}"></i> ${i.label}</a>`
+            ).join('');
+        }
+        async function getRecipes() {
+            const d = localStorage.getItem('recipes'); if(d) return JSON.parse(d);
+            try { const r = await fetch('recipes.json'); const data = await r.json(); localStorage.setItem('recipes', JSON.stringify(data)); return data; } catch(e){ return []; }
+        }
+        function saveRecipes(r) { localStorage.setItem('recipes', JSON.stringify(r)); }
+
+        // --- LOGIQUE SPÉCIFIQUE ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadMenu();
+            document.getElementById('menu-toggle').onclick = () => document.querySelector('.sidebar').classList.toggle('active');
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const editId = urlParams.get('id');
+
+            if (editId) {
+                document.getElementById('form-title').textContent = "Modifier la recette";
+                const recipes = await getRecipes();
+                const recipe = recipes.find(r => r.id === editId);
+                if (recipe) {
+                    document.getElementById('inp-id').value = recipe.id;
+                    document.getElementById('inp-name').value = recipe.name;
+                    document.getElementById('inp-type').value = recipe.type;
+                    document.getElementById('inp-time').value = recipe.time;
+                    document.getElementById('inp-servings').value = recipe.servings;
+                    document.getElementById('inp-steps').value = recipe.steps;
+                    recipe.ingredients.forEach(i => addIngRow(i));
+                }
+            } else { addIngRow(); }
+
+            document.getElementById('recipe-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                let recipes = await getRecipes();
+                const ingRows = document.querySelectorAll('.ing-row');
+                const ingredients = Array.from(ingRows).map(row => ({
+                    name: row.querySelector('.name').value,
+                    qty: parseFloat(row.querySelector('.qty').value),
+                    unit: row.querySelector('.unit').value
+                })).filter(i => i.name);
+
+                const newRecipe = {
+                    id: document.getElementById('inp-id').value || Date.now().toString(),
+                    name: document.getElementById('inp-name').value,
+                    type: document.getElementById('inp-type').value,
+                    time: parseInt(document.getElementById('inp-time').value),
+                    servings: parseInt(document.getElementById('inp-servings').value),
+                    steps: document.getElementById('inp-steps').value,
+                    ingredients: ingredients
+                };
+
+                if (editId) { const idx = recipes.findIndex(r => r.id === editId); recipes[idx] = newRecipe; }
+                else { recipes.push(newRecipe); }
+                saveRecipes(recipes);
+                window.location.href = 'index.html';
+            });
+        });
+
+        function addIngRow(values = {name:'', qty:'', unit:''}) {
+            const div = document.createElement('div');
+            div.className = 'ing-row';
+            div.style.display = 'grid'; div.style.gridTemplateColumns = '2fr 1fr 1fr auto'; div.style.gap = '0.5rem'; div.style.marginBottom = '0.5rem';
+            div.innerHTML = `
+                <input type="text" class="name" placeholder="Nom" value="${values.name}" required>
+                <input type="number" class="qty" placeholder="Qté" value="${values.qty}" required>
+                <input type="text" class="unit" placeholder="Unité" value="${values.unit}">
+                <button type="button" onclick="this.parentElement.remove()" class="btn btn-danger">x</button>
+            `;
+            document.getElementById('ingredients-list').appendChild(div);
+        }
+    </script>
+</body>
+</html>
