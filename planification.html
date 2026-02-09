@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planification</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --primary: #10b981; --bg: #f3f4f6; --surface: #ffffff;
+            --text: #1f2937; --text-muted: #6b7280; --border: #e5e7eb;
+        }
+        [data-theme="dark"] {
+            --bg: #111827; --surface: #1f2937; --text: #f9fafb;
+            --text-muted: #9ca3af; --border: #374151;
+        }
+        body { background: var(--bg); color: var(--text); margin: 0; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; }
+        a { text-decoration: none; color: inherit; }
+        .sidebar { width: 250px; background: #111827; color: white; position: fixed; height: 100vh; left: 0; top: 0; padding: 1.5rem; display: flex; flex-direction: column; }
+        .sidebar h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .nav-item { padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; transition: 0.2s; display: flex; gap: 0.8rem; align-items: center; color: #9ca3af; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .main-content { margin-left: 250px; padding: 2rem; flex: 1; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+        .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        select { width: 100%; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
+        @media(max-width: 768px) { .sidebar { transform: translateX(-100%); z-index: 100; transition: 0.3s; } .sidebar.active { transform: translateX(0); } .main-content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <h2><i class="ph ph-chef-hat"></i> CuisineConnect</h2>
+        <div id="nav-container"></div>
+    </nav>
+
+    <main class="main-content">
+        <header style="display:flex; justify-content:space-between; align-items:center;">
+            <button id="menu-toggle" style="background:none; border:none; font-size:1.5rem; cursor:pointer;"><i class="ph ph-list"></i></button>
+            <h1>Planification Hebdomadaire</h1>
+            <button onclick="resetPlan()" class="btn btn-secondary">Nouvelle Semaine</button>
+        </header>
+
+        <div class="grid" id="plan-grid" style="margin-top:2rem;"></div>
+    </main>
+
+    <script>
+        // --- FONCTIONS COMMUNES ---
+        async function loadMenu() {
+            const res = await fetch('menu.json'); const items = await res.json();
+            document.getElementById('nav-container').innerHTML = items.map(i => 
+                `<a href="${i.link}" class="nav-item ${i.link === 'planification.html' ? 'active' : ''}"><i class="ph ${i.icon}"></i> ${i.label}</a>`
+            ).join('');
+        }
+        async function getRecipes() {
+            const d = localStorage.getItem('recipes'); if(d) return JSON.parse(d);
+            try { const r = await fetch('recipes.json'); const data = await r.json(); localStorage.setItem('recipes', JSON.stringify(data)); return data; } catch(e){ return []; }
+        }
+
+        // --- LOGIQUE SPÉCIFIQUE ---
+        const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+        document.addEventListener('DOMContentLoaded', async () => {
+            loadMenu();
+            document.getElementById('menu-toggle').onclick = () => document.querySelector('.sidebar').classList.toggle('active');
+            
+            const recipes = await getRecipes();
+            const planGrid = document.getElementById('plan-grid');
+            let plan = JSON.parse(localStorage.getItem('weeklyPlan')) || {};
+
+            const renderDay = (day) => {
+                const selectedId = plan[day] || "";
+                const selectedRecipe = recipes.find(r => r.id === selectedId);
+                return `
+                <div class="card">
+                    <h3>${day}</h3>
+                    <select onchange="updatePlan('${day}', this.value)">
+                        <option value="">-- Aucun repas --</option>
+                        ${recipes.map(r => `<option value="${r.id}" ${r.id === selectedId ? 'selected' : ''}>${r.name}</option>`).join('')}
+                    </select>
+                    ${selectedRecipe ? `
+                        <div style="background:var(--bg); padding:0.5rem; border-radius:6px;">
+                            <strong>${selectedRecipe.name}</strong><br>
+                            <small>${selectedRecipe.time} min</small>
+                        </div>
+                    ` : ''}
+                </div>`;
+            };
+
+            planGrid.innerHTML = DAYS.map(renderDay).join('');
+
+            window.updatePlan = (day, recipeId) => {
+                plan[day] = recipeId;
+                localStorage.setItem('weeklyPlan', JSON.stringify(plan));
+                location.reload();
+            };
+
+            window.resetPlan = () => {
+                localStorage.removeItem('weeklyPlan');
+                location.reload();
+            };
+        });
+    </script>
+</body>
+</html>
