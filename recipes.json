@@ -1,0 +1,27 @@
+[
+  {
+    "id": "1",
+    "name": "Pâtes Carbonara",
+    "type": "plat",
+    "time": 20,
+    "servings": 4,
+    "ingredients": [
+      { "name": "Pâtes", "qty": 400, "unit": "g" },
+      { "name": "Lardons", "qty": 150, "unit": "g" },
+      { "name": "Œufs", "qty": 4, "unit": "unités" }
+    ],
+    "steps": "1. Cuire les pâtes.\n2. Faire revenir les lardons.\n3. Mélanger les œufs et le fromage.\n4. Mélanger le tout."
+  },
+  {
+    "id": "2",
+    "name": "Tarte aux Pommes",
+    "type": "dessert",
+    "time": 45,
+    "servings": 6,
+    "ingredients": [
+      { "name": "Pâte sablée", "qty": 1, "unit": "rouleau" },
+      { "name": "Pommes", "qty": 4, "unit": "fruits" }
+    ],
+    "steps": "1. Étaler la pâte.\n2. Couper les pommes.\n3. Cuire 30 min."
+  }
+]
