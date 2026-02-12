@@ -35,7 +35,7 @@
             transform: translateY(-4px); 
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); 
             border-color: var(--primary);
-            cursor: pointer; /* Indique que c'est cliquable */
+            cursor: pointer; 
         }
         
         .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; }
@@ -60,10 +60,19 @@
     </nav>
 
     <main class="main-content">
-        <header style="display:flex; justify-content:space-between; align-items:center;">
+        <header style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <button id="menu-toggle" style="background:none; border:none; font-size:1.5rem; cursor:pointer;"><i class="ph ph-list"></i></button>
             <h1>Mes Recettes</h1>
-            <a href="editor.html" class="btn btn-primary"><i class="ph ph-plus"></i> Nouvelle</a>
+            
+            <div style="display:flex; gap:1rem;">
+                <!-- NOUVEAU BOUTON IMPORT -->
+                <button onclick="document.getElementById('import-input').click()" class="btn btn-secondary">
+                    <i class="ph ph-upload-simple"></i> Importer JSON
+                </button>
+                <input type="file" id="import-input" accept=".json" style="display:none;" onchange="handleImport(this)">
+                
+                <a href="editor.html" class="btn btn-primary"><i class="ph ph-plus"></i> Nouvelle</a>
+            </div>
         </header>
 
         <div class="grid" id="recipe-grid" style="margin-top: 2rem;"></div>
@@ -83,7 +92,46 @@
         }
         function saveRecipes(recipes) { localStorage.setItem('recipes', JSON.stringify(recipes)); }
 
-        // --- SPECIFIQUE ---
+        // --- GESTION IMPORT (NOUVEAU) ---
+        async function handleImport(input) {
+            const file = input.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    
+                    if(!Array.isArray(imported)) {
+                        alert("Erreur : Le fichier JSON doit être une liste de recettes (tableau [...]).");
+                        return;
+                    }
+
+                    const existingRecipes = await getRecipes();
+                    let count = 0;
+
+                    imported.forEach(r => {
+                        // On s'assure que chaque recette a un ID unique
+                        r.id = r.id || (Date.now().toString() + Math.random().toString(36).substr(2, 5));
+                        existingRecipes.push(r);
+                        count++;
+                    });
+
+                    saveRecipes(existingRecipes);
+                    alert(`✅ ${count} recette(s) importée(s) avec succès !`);
+                    location.reload();
+
+                } catch(err) {
+                    console.error(err);
+                    alert("Erreur : Impossible de lire le fichier. Vérifiez le format JSON.");
+                }
+            };
+            reader.readAsText(file);
+            // Reset input pour pouvoir ré-importer le même fichier si besoin
+            input.value = '';
+        }
+
+        // --- SPECIFIQUE AFFICHAGE ---
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme(); loadMenu();
             
@@ -100,7 +148,7 @@
 
             const grid = document.getElementById('recipe-grid');
             const recipes = await getRecipes();
-            if (recipes.length === 0) grid.innerHTML = '<p>Aucune recette trouvée.</p>';
+            if (recipes.length === 0) grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Aucune recette trouvée. Importez-en une ou créez-en une !</p>';
             
             grid.innerHTML = recipes.map(r => `
                 <div class="card" onclick="window.location.href='details.html?id=${r.id}'">
@@ -108,7 +156,6 @@
                     <h3>${r.name}</h3>
                     <p style="color:var(--text-muted); font-size:0.9rem;"><i class="ph ph-clock"></i> ${r.time} min | <i class="ph ph-users"></i> ${r.servings} pers.</p>
                     
-                    <!-- Boutons flottants pour empêcher le clic sur la carte -->
                     <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
                         <a href="editor.html?id=${r.id}" class="btn btn-secondary btn-icon" title="Modifier"><i class="ph ph-pencil"></i></a>
                         <button onclick="deleteRecipe('${r.id}', event)" class="btn btn-danger btn-icon" title="Supprimer"><i class="ph ph-trash"></i></button>
@@ -117,7 +164,7 @@
             `).join('');
 
             window.deleteRecipe = async (id, event) => {
-                event.stopPropagation(); // Empêche d'ouvrir la page détail
+                event.stopPropagation(); 
                 if(confirm('Supprimer ?')) { let recipes = await getRecipes(); recipes = recipes.filter(r => r.id !== id); saveRecipes(recipes); location.reload(); }
             };
         });
