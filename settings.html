@@ -36,7 +36,6 @@
             <button id="menu-toggle" style="background:none; border:none; font-size:1.5rem; cursor:pointer;"><i class="ph ph-list"></i></button>
             <h1>Paramètres</h1>
         </header>
-
         <div class="card" style="max-width: 600px;">
             <h3>Apparence</h3>
             <div style="display:flex; justify-content:space-between; align-items:center; margin: 1rem 0;">
@@ -51,7 +50,6 @@
     </main>
 
     <script>
-        // --- COMMUN ---
         function initTheme() { const savedTheme = localStorage.getItem('theme') || 'light'; document.body.setAttribute('data-theme', savedTheme); }
         function toggleTheme() {
             const current = document.body.getAttribute('data-theme');
@@ -78,13 +76,7 @@
             overlay.onclick = closeMenu;
         });
 
-        // --- SPECIFIQUE ---
-        function clearData() {
-            if(confirm("Attention : cela effacera toutes vos modifications locales. Continuer ?")) {
-                localStorage.clear();
-                location.reload();
-            }
-        }
+        function clearData() { if(confirm("Attention : cela effacera toutes vos modifications locales. Continuer ?")) { localStorage.clear(); location.reload(); } }
     </script>
 </body>
 </html>
