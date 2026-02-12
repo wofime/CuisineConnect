@@ -27,7 +27,9 @@
     </style>
 </head>
 <body>
+    <!-- VOILE POUR LE MENU -->
     <div class="overlay" id="overlay"></div>
+    
     <nav class="sidebar">
         <h2><i class="ph ph-chef-hat"></i> CuisineConnect</h2>
         <div id="nav-container"></div>
@@ -64,12 +66,15 @@
     </main>
 
     <script>
-        // --- COMMUN ---
+        // --- FONCTIONS COMMUNES ---
         async function loadMenu() {
-            try { const res = await fetch('menu.json'); const items = await res.json();
-            document.getElementById('nav-container').innerHTML = items.map(i => 
-                `<a href="${i.link}" class="nav-item ${i.link === 'editor.html' ? 'active' : ''}"><i class="ph ${i.icon}"></i> ${i.label}</a>`
-            ).join(''); } catch(e){}
+            try { 
+                const res = await fetch('menu.json'); 
+                const items = await res.json();
+                document.getElementById('nav-container').innerHTML = items.map(i => 
+                    `<a href="${i.link}" class="nav-item ${i.link === 'editor.html' ? 'active' : ''}"><i class="ph ${i.icon}"></i> ${i.label}</a>`
+                ).join(''); 
+            } catch(e){}
         }
         async function getRecipes() {
             const d = localStorage.getItem('recipes'); if(d) return JSON.parse(d);
@@ -77,19 +82,21 @@
         }
         function saveRecipes(r) { localStorage.setItem('recipes', JSON.stringify(r)); }
 
-        // --- MENU JS ---
+        // --- GESTION MENU (IDENTIQUE INDEX) ---
         document.addEventListener('DOMContentLoaded', () => {
             loadMenu();
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.getElementById('overlay');
             const toggle = document.getElementById('menu-toggle');
+            
             const closeMenu = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
             const openMenu = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
+
             toggle.onclick = () => { if(sidebar.classList.contains('active')) closeMenu(); else openMenu(); };
             overlay.onclick = closeMenu;
         });
 
-        // --- SPECIFIQUE ---
+        // --- LOGIQUE SPECIFIQUE FORMULAIRE ---
         const urlParams = new URLSearchParams(window.location.search);
         const editId = urlParams.get('id');
 
