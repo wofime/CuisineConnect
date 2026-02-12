@@ -113,92 +113,62 @@
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
         window.onclick = function(event) { if (event.target.classList.contains('modal')) { event.target.classList.remove('active'); } }
 
-        // --- IMPORT CODE (AVEC VERIF ID) ---
+        // --- IMPORT CODE ---
         function openImportCode() { document.getElementById('import-textarea').value = ""; openModal('modal-import'); }
-
         async function handleCodeImport() {
             const code = document.getElementById('import-textarea').value;
             if(!code.trim()) { alert("Le champ est vide."); return; }
-
             try {
                 const imported = JSON.parse(code);
                 if(!Array.isArray(imported)) throw new Error("Le format n'est pas une liste de recettes.");
-
                 const existingRecipes = await getRecipes();
-                let count = 0;
-                let skipped = 0;
-
+                let count = 0; let skipped = 0;
                 imported.forEach(r => {
-                    // Générer un ID si la recette importée n'en a pas
-                    r.id = r.id || Date.now();
-
-                    // Vérifier si l'ID existe déjà
-                    const alreadyExists = existingRecipes.some(existing => existing.id == r.id);
-                    
-                    if (alreadyExists) {
-                        console.log("Doublon ignoré : " + r.name);
-                        skipped++;
-                    } else {
-                        existingRecipes.push(r);
-                        count++;
-                    }
+                    // FORCE L'ID EN TEXTE (String)
+                    r.id = String(r.id || Date.now()); 
+                    // Comparaison stricte texte
+                    const alreadyExists = existingRecipes.some(existing => String(existing.id) === r.id);
+                    if (alreadyExists) { skipped++; } 
+                    else { existingRecipes.push(r); count++; }
                 });
-
                 saveRecipes(existingRecipes);
-                let message = `✅ ${count} recette(s) importée(s) !`;
-                if(skipped > 0) message += ` (⚠️ ${skipped} doublon(s) ignoré(s))`;
-                
-                alert(message);
-                closeModal('modal-import');
-                location.reload();
-
-            } catch (e) {
-                alert("Erreur : Le code JSON n'est pas valide.");
-            }
+                let message = `✅ ${count} recette(s) importée(s) !`; if(skipped > 0) message += ` (⚠️ ${skipped} doublon(s) ignoré(s))`;
+                alert(message); closeModal('modal-import'); location.reload();
+            } catch (e) { alert("Erreur : Le code JSON n'est pas valide."); }
         }
 
         // --- EXPORT CODE ---
-        async function openExportCode() {
-            const recipes = await getRecipes();
-            const jsonString = JSON.stringify(recipes, null, 2); 
-            document.getElementById('export-textarea').value = jsonString;
-            openModal('modal-export');
-        }
+        async function openExportCode() { const recipes = await getRecipes(); const jsonString = JSON.stringify(recipes, null, 2); document.getElementById('export-textarea').value = jsonString; openModal('modal-export'); }
         function copyToClipboard() { const copyText = document.getElementById("export-textarea"); copyText.select(); document.execCommand("copy"); alert("Code copié !"); }
         function downloadJSON() { const text = document.getElementById("export-textarea").value; const blob = new Blob([text], { type: "application/json" }); const anchor = document.createElement("a"); anchor.download = "mes_recettes_export.json"; anchor.href = window.URL.createObjectURL(blob); anchor.click(); anchor.remove(); }
 
-        // --- IMPORT FICHIER (AVEC VERIF ID) ---
+        // --- IMPORT FICHIER ---
         async function handleFileImport(input) {
-            const file = input.files[0];
-            if(!file) return;
+            const file = input.files[0]; if(!file) return;
             const reader = new FileReader();
             reader.onload = async function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
                     if(!Array.isArray(imported)) { alert("Erreur : Le fichier doit être une liste de recettes."); return; }
                     const existingRecipes = await getRecipes();
-                    let count = 0;
-                    let skipped = 0;
-
+                    let count = 0; let skipped = 0;
                     imported.forEach(r => {
-                        r.id = r.id || Date.now();
-                        const alreadyExists = existingRecipes.some(existing => existing.id == r.id);
+                        // FORCE L'ID EN TEXTE
+                        r.id = String(r.id || Date.now());
+                        // Comparaison stricte texte
+                        const alreadyExists = existingRecipes.some(existing => String(existing.id) === r.id);
                         if (alreadyExists) { skipped++; } 
                         else { existingRecipes.push(r); count++; }
                     });
-
                     saveRecipes(existingRecipes);
-                    let message = `✅ ${count} recette(s) importée(s) !`;
-                    if(skipped > 0) message += ` (⚠️ ${skipped} doublon(s) ignoré(s))`;
-                    alert(message);
-                    location.reload();
+                    let message = `✅ ${count} recette(s) importée(s) !`; if(skipped > 0) message += ` (⚠️ ${skipped} doublon(s) ignoré(s))`;
+                    alert(message); location.reload();
                 } catch(err) { alert("Erreur fichier."); }
             };
-            reader.readAsText(file);
-            input.value = '';
+            reader.readAsText(file); input.value = '';
         }
 
-        // --- INITIALISATION ---
+        // --- INITIALISATION & SUPPRESSION (CORRIGÉE) ---
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme(); loadMenu();
             const sidebar = document.querySelector('.sidebar'); const overlay = document.getElementById('overlay'); const toggle = document.getElementById('menu-toggle');
@@ -224,8 +194,20 @@
             `).join('');
 
             window.deleteRecipe = async (id, event) => {
-                event.stopPropagation(); 
-                if(confirm('Supprimer ?')) { let recipes = await getRecipes(); recipes = recipes.filter(r => r.id !== id); saveRecipes(recipes); location.reload(); }
+                // 1. Empêcher le clic de faire autre chose (nav ou propagation)
+                if(event) {
+                    event.preventDefault(); 
+                    event.stopPropagation(); 
+                }
+                
+                // 2. Confirmation
+                if(confirm('Êtes-vous sûr de vouloir supprimer cette recette ?')) { 
+                    let recipes = await getRecipes(); 
+                    // 3. Force la comparaison en TEXTE pour éviter les bugs 1001 vs "1001"
+                    recipes = recipes.filter(r => String(r.id) !== String(id)); 
+                    saveRecipes(recipes); 
+                    location.reload(); 
+                }
             };
         });
     </script>
