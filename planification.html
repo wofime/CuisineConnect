@@ -38,12 +38,10 @@
             <h1>Planification Hebdomadaire</h1>
             <button onclick="resetPlan()" class="btn btn-secondary">Nouvelle Semaine</button>
         </header>
-
         <div class="grid" id="plan-grid" style="margin-top:2rem;"></div>
     </main>
 
     <script>
-        // --- COMMUN ---
         async function loadMenu() {
             try { const res = await fetch('menu.json'); const items = await res.json();
             document.getElementById('nav-container').innerHTML = items.map(i => 
@@ -67,14 +65,12 @@
             overlay.onclick = closeMenu;
         });
 
-        // --- SPECIFIQUE ---
         const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
         (async function initPlanner() {
             const recipes = await getRecipes();
             const planGrid = document.getElementById('plan-grid');
             let plan = JSON.parse(localStorage.getItem('weeklyPlan')) || {};
-
-            const renderDay = (day) => {
+            planGrid.innerHTML = DAYS.map(day => {
                 const selectedId = plan[day] || "";
                 const selectedRecipe = recipes.find(r => r.id === selectedId);
                 return `
@@ -84,27 +80,11 @@
                         <option value="">-- Aucun repas --</option>
                         ${recipes.map(r => `<option value="${r.id}" ${r.id === selectedId ? 'selected' : ''}>${r.name}</option>`).join('')}
                     </select>
-                    ${selectedRecipe ? `
-                        <div style="background:var(--bg); padding:0.5rem; border-radius:6px;">
-                            <strong>${selectedRecipe.name}</strong><br>
-                            <small>${selectedRecipe.time} min</small>
-                        </div>
-                    ` : ''}
+                    ${selectedRecipe ? `<div style="background:var(--bg); padding:0.5rem; border-radius:6px;"><strong>${selectedRecipe.name}</strong><br><small>${selectedRecipe.time} min</small></div>` : ''}
                 </div>`;
-            };
-
-            planGrid.innerHTML = DAYS.map(renderDay).join('');
-
-            window.updatePlan = (day, recipeId) => {
-                plan[day] = recipeId;
-                localStorage.setItem('weeklyPlan', JSON.stringify(plan));
-                location.reload();
-            };
-
-            window.resetPlan = () => {
-                localStorage.removeItem('weeklyPlan');
-                location.reload();
-            };
+            }).join('');
+            window.updatePlan = (day, recipeId) => { plan[day] = recipeId; localStorage.setItem('weeklyPlan', JSON.stringify(plan)); location.reload(); };
+            window.resetPlan = () => { localStorage.removeItem('weeklyPlan'); location.reload(); };
         })();
     </script>
 </body>
