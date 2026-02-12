@@ -11,48 +11,42 @@
         body { background: var(--bg); color: var(--text); margin: 0; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; overflow-x: hidden; }
         a { text-decoration: none; color: inherit; }
         
-        /* Sidebar */
         .sidebar { width: 280px; background: #111827; color: white; position: fixed; height: 100vh; left: 0; top: 0; padding: 1.5rem; display: flex; flex-direction: column; transform: translateX(-100%); transition: transform 0.3s ease; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
         .sidebar.active { transform: translateX(0); }
         .sidebar h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
         .nav-item { padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; transition: 0.2s; display: flex; gap: 0.8rem; align-items: center; color: #9ca3af; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         
-        /* Content */
         .main-content { margin-left: 0; padding: 2rem; flex: 1; transition: margin-left 0.3s ease; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
         
-        /* Cards */
         .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; position: relative; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--primary); cursor: pointer; }
         
-        /* Buttons */
         .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; font-size: 0.9rem; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
         .btn-danger { background: #fee2e2; color: #ef4444; }
         .btn-icon { padding: 0.5rem; border-radius: 6px; }
         
-        /* Tags */
         .tag { padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
         .tag-plat { background: #d1fae5; color: #065f46; }
         .tag-dessert { background: #fee2e2; color: #991b1b; }
         
-        /* Overlays & Modals */
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
         .overlay.active { display: block; }
 
-        /* Modale pour le Code */
+        /* CSS POUR LA FENÊTRE MODALE */
         .modal { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.7); z-index: 2000; 
+            background: rgba(0,0,0,0.8); z-index: 2000; 
             display: none; align-items: center; justify-content: center; 
         }
         .modal.active { display: flex; }
         .modal-content { 
             background: var(--surface); padding: 2rem; width: 90%; max-width: 700px; 
             border-radius: 12px; display: flex; flex-direction: column; gap: 1rem; 
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); position: relative; z-index: 2001;
         }
         .code-area { 
             width: 100%; height: 300px; font-family: monospace; font-size: 0.9rem; 
@@ -78,11 +72,9 @@
             <h1>Mes Recettes</h1>
             
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                <!-- Boutons Code -->
-                <button onclick="openImportCode()" class="btn btn-secondary" title="Coller du code JSON"><i class="ph ph-code"></i> Coller JSON</button>
-                <button onclick="openExportCode()" class="btn btn-secondary" title="Voir / Copier le code"><i class="ph ph-brackets-curly"></i> Code</button>
-                
-                <!-- Bouton Fichier -->
+                <!-- BOUTONS IMPORT / EXPORT -->
+                <button onclick="openImportCode()" class="btn btn-secondary"><i class="ph ph-code"></i> Coller JSON</button>
+                <button onclick="openExportCode()" class="btn btn-secondary"><i class="ph ph-brackets-curly"></i> Code</button>
                 <button onclick="document.getElementById('import-file-input').click()" class="btn btn-secondary"><i class="ph ph-upload-simple"></i> Fichier</button>
                 <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="handleFileImport(this)">
                 
@@ -93,31 +85,26 @@
         <div class="grid" id="recipe-grid" style="margin-top: 2rem;"></div>
     </main>
 
-    <!-- MODALE : EXPORT CODE -->
+    <!-- MODALE EXPORT -->
     <div id="modal-export" class="modal">
         <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">Code de vos recettes</h3>
-                <button onclick="closeModal('modal-export')" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            </div>
-            <p style="font-size:0.9rem; color:var(--text-muted);">Vous pouvez copier ce code pour le sauvegarder ailleurs, ou le télécharger en fichier.</p>
+            <h3>Code de vos recettes</h3>
+            <button onclick="closeModal('modal-export')" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
             <textarea id="export-textarea" class="code-area" readonly></textarea>
             <div style="display:flex; justify-content:flex-end; gap:1rem;">
-                <button onclick="downloadJSON()" class="btn btn-secondary"><i class="ph ph-download"></i> Télécharger .json</button>
+                <button onclick="downloadJSON()" class="btn btn-secondary"><i class="ph ph-download"></i> Télécharger</button>
                 <button onclick="copyToClipboard()" class="btn btn-primary"><i class="ph ph-copy"></i> Copier</button>
             </div>
         </div>
     </div>
 
-    <!-- MODALE : IMPORT CODE -->
+    <!-- MODALE IMPORT -->
     <div id="modal-import" class="modal">
         <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">Importer par code</h3>
-                <button onclick="closeModal('modal-import')" style="background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            </div>
-            <p style="font-size:0.9rem; color:var(--text-muted);">Collez votre code JSON ci-dessous pour ajouter les recettes.</p>
-            <textarea id="import-textarea" class="code-area" placeholder='[{"name": "Ma recette", ...}, ...]'></textarea>
+            <h3>Importer par code</h3>
+            <button onclick="closeModal('modal-import')" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+            <p>Collez votre code JSON ci-dessous.</p>
+            <textarea id="import-textarea" class="code-area" placeholder='[{"name": "Recette", ...}]'></textarea>
             <div style="display:flex; justify-content:flex-end; gap:1rem;">
                 <button onclick="closeModal('modal-import')" class="btn btn-secondary">Annuler</button>
                 <button onclick="handleCodeImport()" class="btn btn-primary">Importer</button>
@@ -126,34 +113,75 @@
     </div>
 
     <script>
-        // --- FONCTIONS COMMUNES ---
-        function initTheme() { const savedTheme = localStorage.getItem('theme') || 'light'; document.body.setAttribute('data-theme', savedTheme); }
+        // --- FONCTIONS DE BASE ---
+        function initTheme() { 
+            const savedTheme = localStorage.getItem('theme') || 'light'; 
+            document.body.setAttribute('data-theme', savedTheme); 
+        }
+        
         async function loadMenu() {
-            try { const response = await fetch('menu.json'); const menuItems = await response.json(); const container = document.getElementById('nav-container'); const currentPath = window.location.pathname.split('/').pop();
-            container.innerHTML = menuItems.map(item => `<a href="${item.link}" class="nav-item ${item.link === currentPath ? 'active' : ''}"><i class="ph ${item.icon}"></i> ${item.label}</a>`).join('');
+            try { 
+                const response = await fetch('menu.json'); 
+                const menuItems = await response.json(); 
+                const container = document.getElementById('nav-container'); 
+                const currentPath = window.location.pathname.split('/').pop();
+                container.innerHTML = menuItems.map(item => `<a href="${item.link}" class="nav-item ${item.link === currentPath ? 'active' : ''}"><i class="ph ${item.icon}"></i> ${item.label}</a>`).join(''); 
             } catch (e) { console.error(e); }
         }
+        
         async function getRecipes() {
-            const localData = localStorage.getItem('recipes'); if (localData) return JSON.parse(localData);
-            try { const res = await fetch('recipes.json'); const data = await res.json(); localStorage.setItem('recipes', JSON.stringify(data)); return data; } catch (e) { return []; }
+            const localData = localStorage.getItem('recipes'); 
+            if (localData) return JSON.parse(localData);
+            try { 
+                const res = await fetch('recipes.json'); 
+                const data = await res.json(); 
+                localStorage.setItem('recipes', JSON.stringify(data)); 
+                return data; 
+            } catch (e) { return []; }
         }
+        
         function saveRecipes(recipes) { localStorage.setItem('recipes', JSON.stringify(recipes)); }
 
         // --- GESTION DES MODALES ---
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-        
-        // Clic en dehors de la modale pour fermer
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.classList.remove('active');
-            }
+        function openModal(id) { 
+            document.getElementById(id).classList.add('active'); 
+        }
+        function closeModal(id) { 
+            document.getElementById(id).classList.remove('active'); 
         }
 
-        // --- LOGIQUE EXPORT CODE ---
+        // --- FONCTION IMPORT CODE (Celle qui posait problème) ---
+        function openImportCode() {
+            console.log("Bouton Coller JSON cliqué !"); // Pour débugger dans la console (F12)
+            // alert("Bouton cliqué !"); // Si ça marche, cette fenêtre apparaît.
+            document.getElementById('import-textarea').value = ""; 
+            openModal('modal-import');
+        }
+
+        async function handleCodeImport() {
+            const code = document.getElementById('import-textarea').value;
+            if(!code.trim()) { alert("Le champ est vide."); return; }
+            try {
+                const imported = JSON.parse(code);
+                if(!Array.isArray(imported)) throw new Error("Format invalide.");
+                const existingRecipes = await getRecipes();
+                let count = 0;
+                imported.forEach(r => {
+                    r.id = r.id || (Date.now().toString() + Math.random().toString(36).substr(2, 5));
+                    existingRecipes.push(r);
+                    count++;
+                });
+                saveRecipes(existingRecipes);
+                alert(`✅ ${count} recette(s) importée(s) !`);
+                closeModal('modal-import');
+                location.reload();
+            } catch (e) { alert("Erreur : Le code JSON n'est pas valide."); }
+        }
+
+        // --- EXPORT CODE ---
         async function openExportCode() {
             const recipes = await getRecipes();
-            const jsonString = JSON.stringify(recipes, null, 2); // Formaté joliment
+            const jsonString = JSON.stringify(recipes, null, 2); 
             document.getElementById('export-textarea').value = jsonString;
             openModal('modal-export');
         }
@@ -162,7 +190,6 @@
             const copyText = document.getElementById("export-textarea");
             copyText.select();
             document.execCommand("copy");
-            // Ou méthode moderne : navigator.clipboard.writeText(copyText.value);
             alert("Code copié !");
         }
 
@@ -173,37 +200,9 @@
             anchor.download = "mes_recettes_export.json";
             anchor.href = window.URL.createObjectURL(blob);
             anchor.click();
-            anchor.remove();
         }
 
-        // --- LOGIQUE IMPORT CODE ---
-        async function handleCodeImport() {
-            const code = document.getElementById('import-textarea').value;
-            if(!code.trim()) { alert("Le champ est vide."); return; }
-
-            try {
-                const imported = JSON.parse(code);
-                if(!Array.isArray(imported)) throw new Error("Le format n'est pas une liste de recettes.");
-
-                const existingRecipes = await getRecipes();
-                let count = 0;
-                imported.forEach(r => {
-                    r.id = r.id || (Date.now().toString() + Math.random().toString(36).substr(2, 5));
-                    existingRecipes.push(r);
-                    count++;
-                });
-
-                saveRecipes(existingRecipes);
-                alert(`✅ ${count} recette(s) importée(s) !`);
-                closeModal('modal-import');
-                location.reload();
-
-            } catch (e) {
-                alert("Erreur : Le code JSON n'est pas valide.");
-            }
-        }
-
-        // --- LOGIQUE IMPORT FICHIER ---
+        // --- IMPORT FICHIER ---
         async function handleFileImport(input) {
             const file = input.files[0];
             if(!file) return;
@@ -211,7 +210,7 @@
             reader.onload = async function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    if(!Array.isArray(imported)) { alert("Erreur : Le fichier doit être une liste de recettes."); return; }
+                    if(!Array.isArray(imported)) { alert("Erreur fichier."); return; }
                     const existingRecipes = await getRecipes();
                     let count = 0;
                     imported.forEach(r => { r.id = r.id || (Date.now().toString() + Math.random().toString(36).substr(2, 5)); existingRecipes.push(r); count++; });
@@ -224,10 +223,11 @@
             input.value = '';
         }
 
-        // --- AFFICHAGE LISTE ---
+        // --- INITIALISATION ---
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme(); loadMenu();
             
+            // Menu Sidebar
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.getElementById('overlay');
             const toggle = document.getElementById('menu-toggle');
@@ -236,26 +236,31 @@
             toggle.onclick = () => { if(sidebar.classList.contains('active')) closeMenu(); else openMenu(); };
             overlay.onclick = closeMenu;
 
+            // Affichage Grille
             const grid = document.getElementById('recipe-grid');
             const recipes = await getRecipes();
-            if (recipes.length === 0) grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Aucune recette trouvée. Importez-en une !</p>';
+            if (recipes.length === 0) grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Aucune recette trouvée.</p>';
             
             grid.innerHTML = recipes.map(r => `
                 <div class="card" onclick="window.location.href='details.html?id=${r.id}'">
                     <span class="tag tag-${r.type}">${r.type}</span>
                     <h3>${r.name}</h3>
                     <p style="color:var(--text-muted); font-size:0.9rem;"><i class="ph ph-clock"></i> ${r.time} min | <i class="ph ph-users"></i> ${r.servings} pers.</p>
-                    
                     <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
-                        <a href="editor.html?id=${r.id}" class="btn btn-secondary btn-icon" title="Modifier"><i class="ph ph-pencil"></i></a>
-                        <button onclick="deleteRecipe('${r.id}', event)" class="btn btn-danger btn-icon" title="Supprimer"><i class="ph ph-trash"></i></button>
+                        <a href="editor.html?id=${r.id}" class="btn btn-secondary btn-icon"><i class="ph ph-pencil"></i></a>
+                        <button onclick="deleteRecipe('${r.id}', event)" class="btn btn-danger btn-icon"><i class="ph ph-trash"></i></button>
                     </div>
                 </div>
             `).join('');
 
             window.deleteRecipe = async (id, event) => {
                 event.stopPropagation(); 
-                if(confirm('Supprimer ?')) { let recipes = await getRecipes(); recipes = recipes.filter(r => r.id !== id); saveRecipes(recipes); location.reload(); }
+                if(confirm('Supprimer ?')) { 
+                    let recipes = await getRecipes(); 
+                    recipes = recipes.filter(r => r.id !== id); 
+                    saveRecipes(recipes); 
+                    location.reload(); 
+                }
             };
         });
     </script>
