@@ -38,7 +38,6 @@
             <h1>Liste de Courses</h1>
             <a href="planification.html" class="btn btn-primary">Modifier le plan</a>
         </header>
-
         <div class="card" style="max-width: 800px; margin: 2rem auto;">
             <ul id="shopping-list"></ul>
             <div id="empty-msg" style="text-align:center; padding:2rem; color:var(--text-muted); display:none;">Aucun ingrédient à acheter.</div>
@@ -46,7 +45,6 @@
     </main>
 
     <script>
-        // --- COMMUN ---
         async function loadMenu() {
             try { const res = await fetch('menu.json'); const items = await res.json();
             document.getElementById('nav-container').innerHTML = items.map(i => 
@@ -70,12 +68,10 @@
             overlay.onclick = closeMenu;
         });
 
-        // --- SPECIFIQUE ---
         (async function initShopping() {
             const recipes = await getRecipes();
             const plan = JSON.parse(localStorage.getItem('weeklyPlan')) || {};
             const listEl = document.getElementById('shopping-list');
-            
             const merged = {};
             Object.values(plan).forEach(recipeId => {
                 if(!recipeId) return;
@@ -87,14 +83,9 @@
                     else merged[key].qty += ing.qty;
                 });
             });
-
             const items = Object.values(merged);
             if(items.length === 0) document.getElementById('empty-msg').style.display = 'block';
-            else {
-                listEl.innerHTML = items.map(item => `
-                    <li><span>${item.name}</span><strong>${item.qty} ${item.unit}</strong></li>
-                `).join('');
-            }
+            else { listEl.innerHTML = items.map(item => `<li><span>${item.name}</span><strong>${item.qty} ${item.unit}</strong></li>`).join(''); }
         })();
     </script>
 </body>
