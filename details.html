@@ -10,31 +10,28 @@
         [data-theme="dark"] { --bg: #111827; --surface: #1f2937; --text: #f9fafb; --text-muted: #9ca3af; --border: #374151; }
         body { background: var(--bg); color: var(--text); margin: 0; font-family: system-ui, sans-serif; display: flex; min-height: 100vh; overflow-x: hidden; }
         a { text-decoration: none; color: inherit; }
-        
         .sidebar { width: 280px; background: #111827; color: white; position: fixed; height: 100vh; left: 0; top: 0; padding: 1.5rem; display: flex; flex-direction: column; transform: translateX(-100%); transition: transform 0.3s ease; z-index: 1000; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
         .sidebar.active { transform: translateX(0); }
         .sidebar h2 { margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
         .nav-item { padding: 0.8rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: pointer; transition: 0.2s; display: flex; gap: 0.8rem; align-items: center; color: #9ca3af; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
         .main-content { margin-left: 0; padding: 2rem; flex: 1; transition: margin-left 0.3s ease; }
-        
         .recipe-header { background: var(--surface); padding: 2rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1.5rem; }
         .tag { padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; background: #e5e7eb; color: #374151; }
         .tag-plat { background: #d1fae5; color: #065f46; }
         .tag-dessert { background: #fee2e2; color: #991b1b; }
-        
+        .tag-accompagnement { background: #e0f2fe; color: #075985; }
         .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
-        
         .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-fav { background: transparent; border: 1px solid var(--border); color: var(--text); font-size: 1rem; }
+        .btn-fav.active { background: #fee2e2; color: #ef4444; border-color: #ef4444; }
         
         .action-bar { background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); position: sticky; top: 1rem; display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         select { padding: 0.6rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
-
         ul { padding-left: 1.2rem; line-height: 1.6; }
         li { margin-bottom: 0.5rem; }
-        
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
         .overlay.active { display: block; }
     </style>
@@ -52,7 +49,7 @@
             <h1 id="detail-title">Chargement...</h1>
         </header>
 
-        <!-- BARRE D'ACTION PLANIFICATEUR -->
+        <!-- BARRE D'ACTION AVEC BOUTON FAVORI -->
         <div class="action-bar">
             <div style="display:flex; gap: 1rem; align-items:center; flex:1;">
                 <span>Ajouter au menu :</span>
@@ -66,7 +63,12 @@
                     <option value="Dimanche">Dimanche</option>
                 </select>
             </div>
-            <button onclick="addToPlan()" class="btn btn-primary"><i class="ph ph-calendar-plus"></i> Planifier</button>
+            <div style="display:flex; gap:1rem;">
+                <button id="btn-details-fav" onclick="toggleDetailFavorite()" class="btn btn-fav">
+                    <i class="ph ph-heart"></i> Favori
+                </button>
+                <button onclick="addToPlan()" class="btn btn-primary"><i class="ph ph-calendar-plus"></i> Planifier</button>
+            </div>
         </div>
 
         <div class="recipe-header">
@@ -75,7 +77,6 @@
                 <span style="color:var(--text-muted); font-size:0.9rem;"><i class="ph ph-clock"></i> <span id="detail-time">0</span> min</span>
                 <span style="color:var(--text-muted); font-size:0.9rem;"><i class="ph ph-users"></i> <span id="detail-servings">0</span> pers.</span>
             </div>
-            <!-- AFFICHAGE SOURCE DYNAMIQUE -->
             <div id="detail-source-container"></div>
         </div>
 
@@ -95,7 +96,6 @@
     </main>
 
     <script>
-        // --- COMMUN ---
         async function loadMenu() {
             try { const res = await fetch('menu.json'); const items = await res.json();
             document.getElementById('nav-container').innerHTML = items.map(i => 
@@ -106,6 +106,7 @@
             const d = localStorage.getItem('recipes'); if(d) return JSON.parse(d);
             try { const r = await fetch('recipes.json'); const data = await r.json(); localStorage.setItem('recipes', JSON.stringify(data)); return data; } catch(e){ return []; }
         }
+        function saveRecipes(r) { localStorage.setItem('recipes', JSON.stringify(r)); }
 
         // --- MENU JS ---
         document.addEventListener('DOMContentLoaded', () => {
@@ -115,12 +116,11 @@
             const toggle = document.getElementById('menu-toggle'); 
             const closeMenu = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
             const openMenu = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
-            // Note: Pas de bouton toggle dans le header de cette page (on utilise Retour), mais on garde le code si besoin
             overlay.onclick = closeMenu;
         });
 
         // --- SPECIFIQUE DETAILS ---
-        let currentRecipeId = null;
+        let currentRecipe = null;
 
         (async function loadDetails() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -133,7 +133,7 @@
             
             if(!recipe) { alert("Recette introuvable"); window.location.href = 'index.html'; return; }
 
-            currentRecipeId = recipe.id;
+            currentRecipe = recipe;
 
             // Remplir les infos
             document.getElementById('detail-title').textContent = recipe.name;
@@ -144,46 +144,66 @@
             document.getElementById('detail-steps').textContent = recipe.steps;
             document.getElementById('edit-link').href = `editor.html?id=${recipe.id}`;
 
+            // Etat initial du bouton favori
+            updateFavButtonUI(recipe.isFavorite);
+
             // Ingrédients
             document.getElementById('detail-ingredients').innerHTML = recipe.ingredients.map(ing => 
                 `<li><strong>${ing.qty} ${ing.unit}</strong> : ${ing.name}</li>`
             ).join('');
 
-            // --- GESTION SOURCE (LIEN OU TEXTE) ---
+            // Source
             const sourceContainer = document.getElementById('detail-source-container');
             if (recipe.source) {
-                // Si ça commence par http, c'est un lien
                 if (recipe.source.startsWith('http')) {
-                    sourceContainer.innerHTML = `
-                        <div style="margin-top:1rem;">
-                            <a href="${recipe.source}" target="_blank" class="btn btn-secondary" style="font-size:0.9rem;">
-                                <i class="ph ph-link"></i> Voir la source
-                            </a>
-                        </div>
-                    `;
+                    sourceContainer.innerHTML = `<div style="margin-top:1rem;"><a href="${recipe.source}" target="_blank" class="btn btn-secondary" style="font-size:0.9rem;"><i class="ph ph-link"></i> Voir la source</a></div>`;
                 } else {
-                    // Sinon c'est du texte
-                    sourceContainer.innerHTML = `
-                        <div style="margin-top:1rem; color:var(--text-muted); font-style:italic; display:flex; align-items:center; gap:0.5rem;">
-                            <i class="ph ph-book"></i> Source : ${recipe.source}
-                        </div>
-                    `;
+                    sourceContainer.innerHTML = `<div style="margin-top:1rem; color:var(--text-muted); font-style:italic; display:flex; align-items:center; gap:0.5rem;"><i class="ph ph-book"></i> Source : ${recipe.source}</div>`;
                 }
             }
         })();
+
+        // --- GESTION DU BOUTON FAVORI ---
+        function updateFavButtonUI(isFav) {
+            const btn = document.getElementById('btn-details-fav');
+            const icon = btn.querySelector('i');
+            
+            if (isFav) {
+                btn.classList.add('active');
+                icon.className = 'ph ph-heart-fill';
+                btn.innerHTML = '<i class="ph ph-heart-fill"></i> Favori';
+            } else {
+                btn.classList.remove('active');
+                icon.className = 'ph ph-heart';
+                btn.innerHTML = '<i class="ph ph-heart"></i> Favori';
+            }
+        }
+
+        async function toggleDetailFavorite() {
+            if (!currentRecipe) return;
+            
+            // 1. Inverser l'état
+            currentRecipe.isFavorite = !currentRecipe.isFavorite;
+            
+            // 2. Mettre à jour l'interface
+            updateFavButtonUI(currentRecipe.isFavorite);
+            
+            // 3. Sauvegarder dans la liste globale
+            const allRecipes = await getRecipes();
+            const index = allRecipes.findIndex(r => r.id === currentRecipe.id);
+            if (index !== -1) {
+                allRecipes[index] = currentRecipe;
+                saveRecipes(allRecipes);
+            }
+        }
 
         // --- AJOUTER AU PLAN ---
         function addToPlan() {
             const day = document.getElementById('plan-day-select').value;
             let plan = JSON.parse(localStorage.getItem('weeklyPlan')) || {};
-            
-            plan[day] = currentRecipeId;
+            plan[day] = currentRecipe.id;
             localStorage.setItem('weeklyPlan', JSON.stringify(plan));
-            
             alert(`✅ Ajouté au menu du ${day} !`);
-            
-            // Optionnel : Rediriger vers le planificateur
-            // window.location.href = 'planification.html'; 
         }
     </script>
 </body>
