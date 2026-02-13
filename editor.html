@@ -27,9 +27,7 @@
     </style>
 </head>
 <body>
-    <!-- VOILE POUR LE MENU -->
     <div class="overlay" id="overlay"></div>
-    
     <nav class="sidebar">
         <h2><i class="ph ph-chef-hat"></i> CuisineConnect</h2>
         <div id="nav-container"></div>
@@ -44,19 +42,39 @@
         <div class="card" style="max-width: 800px; margin: 2rem auto;">
             <form id="recipe-form">
                 <input type="hidden" id="inp-id">
+                
                 <label>Nom</label>
                 <input type="text" id="inp-name" required>
+                
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div><label>Type</label><select id="inp-type"><option value="entree">Entrée</option><option value="plat">Plat</option><option value="dessert">Dessert</option></select></div>
-                    <div><label>Temps (min)</label><input type="number" id="inp-time" required></div>
+                    <div>
+                        <label>Type</label>
+                        <select id="inp-type">
+                            <option value="entree">Entrée</option>
+                            <option value="plat">Plat</option>
+                            <option value="dessert">Dessert</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Temps (min)</label>
+                        <input type="number" id="inp-time" required>
+                    </div>
                 </div>
+                
                 <label>Personnes</label>
                 <input type="number" id="inp-servings" value="4" required>
+                
+                <!-- CHAMP SOURCE TEXTE LIBRE -->
+                <label>Source (Lien web, livre, etc...)</label>
+                <input type="text" id="inp-source" placeholder="Ex: https://marmiton.org ou Livre de mamie" autocomplete="off">
+
                 <label>Ingrédients</label>
                 <div id="ingredients-list"></div>
                 <button type="button" class="btn btn-secondary" style="margin-bottom:1rem;" onclick="addIngRow()">+ Ajouter ingrédient</button>
+                
                 <label>Étapes</label>
                 <textarea id="inp-steps" rows="5" required></textarea>
+                
                 <div style="display:flex; justify-content:flex-end; gap:1rem;">
                     <a href="index.html" class="btn btn-secondary">Annuler</a>
                     <button type="submit" class="btn btn-primary">Enregistrer</button>
@@ -66,15 +84,12 @@
     </main>
 
     <script>
-        // --- FONCTIONS COMMUNES ---
+        // --- COMMUN ---
         async function loadMenu() {
-            try { 
-                const res = await fetch('menu.json'); 
-                const items = await res.json();
-                document.getElementById('nav-container').innerHTML = items.map(i => 
-                    `<a href="${i.link}" class="nav-item ${i.link === 'editor.html' ? 'active' : ''}"><i class="ph ${i.icon}"></i> ${i.label}</a>`
-                ).join(''); 
-            } catch(e){}
+            try { const res = await fetch('menu.json'); const items = await res.json();
+            document.getElementById('nav-container').innerHTML = items.map(i => 
+                `<a href="${i.link}" class="nav-item ${i.link === 'editor.html' ? 'active' : ''}"><i class="ph ${i.icon}"></i> ${i.label}</a>`
+            ).join(''); } catch(e){}
         }
         async function getRecipes() {
             const d = localStorage.getItem('recipes'); if(d) return JSON.parse(d);
@@ -82,16 +97,14 @@
         }
         function saveRecipes(r) { localStorage.setItem('recipes', JSON.stringify(r)); }
 
-        // --- GESTION MENU (IDENTIQUE INDEX) ---
+        // --- MENU JS ---
         document.addEventListener('DOMContentLoaded', () => {
             loadMenu();
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.getElementById('overlay');
             const toggle = document.getElementById('menu-toggle');
-            
             const closeMenu = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
             const openMenu = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
-
             toggle.onclick = () => { if(sidebar.classList.contains('active')) closeMenu(); else openMenu(); };
             overlay.onclick = closeMenu;
         });
@@ -111,6 +124,7 @@
                     document.getElementById('inp-type').value = recipe.type;
                     document.getElementById('inp-time').value = recipe.time;
                     document.getElementById('inp-servings').value = recipe.servings;
+                    document.getElementById('inp-source').value = recipe.source || ""; 
                     document.getElementById('inp-steps').value = recipe.steps;
                     recipe.ingredients.forEach(i => addIngRow(i));
                 }
@@ -133,6 +147,7 @@
                 type: document.getElementById('inp-type').value,
                 time: parseInt(document.getElementById('inp-time').value),
                 servings: parseInt(document.getElementById('inp-servings').value),
+                source: document.getElementById('inp-source').value, 
                 steps: document.getElementById('inp-steps').value,
                 ingredients: ingredients
             };
