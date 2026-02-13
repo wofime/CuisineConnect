@@ -23,15 +23,26 @@
         .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; position: relative; }
         .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--primary); cursor: pointer; }
         
+        /* STYLES RECHERCHE ET FILTRES */
+        .search-container { background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .search-input { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 1rem; outline: none; margin-bottom: 0.5rem; }
+        .filters { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        .filters::-webkit-scrollbar { display: none; }
+        .filter-btn { padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 20px; background: var(--bg); color: var(--text); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-size: 0.9rem; }
+        .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        
         .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; font-size: 0.9rem; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
         .btn-danger { background: #fee2e2; color: #ef4444; }
         .btn-icon { padding: 0.5rem; border-radius: 6px; }
-        
+        .btn-fav { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem; padding: 0; transition: color 0.2s; }
+        .btn-fav.active { color: #ef4444; } /* Rouge coeur actif */
+
         .tag { padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
         .tag-plat { background: #d1fae5; color: #065f46; }
         .tag-dessert { background: #fee2e2; color: #991b1b; }
+        .tag-accompagnement { background: #e0f2fe; color: #075985; }
         
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
         .overlay.active { display: block; }
@@ -63,6 +74,19 @@
             </div>
         </header>
 
+        <!-- SECTION RECHERCHE ET FILTRES -->
+        <div class="search-container">
+            <input type="text" id="search-input" class="search-input" placeholder="🔍 Rechercher une recette...">
+            <div class="filters" id="filters-container">
+                <button class="filter-btn active" onclick="setFilter('all')">Tout</button>
+                <button class="filter-btn" onclick="setFilter('entree')">Entrées</button>
+                <button class="filter-btn" onclick="setFilter('plat')">Plats</button>
+                <button class="filter-btn" onclick="setFilter('accompagnement')">Accompagnements</button>
+                <button class="filter-btn" onclick="setFilter('dessert')">Desserts</button>
+                <button class="filter-btn" onclick="setFilter('favoris')">❤️ Favoris</button>
+            </div>
+        </div>
+
         <div class="grid" id="recipe-grid" style="margin-top: 2rem;"></div>
     </main>
 
@@ -85,7 +109,7 @@
         <div class="modal-content">
             <h3>Importer par code</h3>
             <button onclick="closeModal('modal-import')" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            <p style="font-size:0.9rem; color:var(--text-muted);">Collez votre code JSON ci-dessous. Si une recette a le même ID, elle ne sera pas ajoutée (pas de doublon).</p>
+            <p style="font-size:0.9rem; color:var(--text-muted);">Collez votre code JSON ci-dessous. Si une recette a le même ID, elle ne sera pas ajoutée.</p>
             <textarea id="import-textarea" class="code-area" placeholder='[{"id": 1001, "name": "Ma recette", ...}, ...]'></textarea>
             <div style="display:flex; justify-content:flex-end; gap:1rem;">
                 <button onclick="closeModal('modal-import')" class="btn btn-secondary">Annuler</button>
@@ -95,6 +119,10 @@
     </div>
 
     <script>
+        // --- ETAT GLOBAL ---
+        let currentFilter = 'all';
+        let currentSearch = '';
+
         // --- FONCTIONS DE BASE ---
         function initTheme() { const savedTheme = localStorage.getItem('theme') || 'light'; document.body.setAttribute('data-theme', savedTheme); }
         async function loadMenu() {
@@ -107,6 +135,22 @@
             try { const res = await fetch('recipes.json'); const data = await res.json(); localStorage.setItem('recipes', JSON.stringify(data)); return data; } catch (e) { return []; }
         }
         function saveRecipes(recipes) { localStorage.setItem('recipes', JSON.stringify(recipes)); }
+
+        // --- GESTION DES FILTRES & RECHERCHE ---
+        function setFilter(filterName) {
+            currentFilter = filterName;
+            // Mise à jour visuelle des boutons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.textContent.toLowerCase().includes(filterName === 'accompagnement' ? 'accomp' : filterName)) {
+                    btn.classList.add('active');
+                }
+                // Cas spécial pour "Tout" et "Favoris"
+                if(filterName === 'all' && btn.textContent === 'Tout') btn.classList.add('active');
+                if(filterName === 'favoris' && btn.textContent.includes('Favoris')) btn.classList.add('active');
+            });
+            renderGrid();
+        }
 
         // --- GESTION DES MODALES ---
         function openModal(id) { document.getElementById(id).classList.add('active'); }
@@ -124,9 +168,7 @@
                 const existingRecipes = await getRecipes();
                 let count = 0; let skipped = 0;
                 imported.forEach(r => {
-                    // FORCE L'ID EN TEXTE (String)
                     r.id = String(r.id || Date.now()); 
-                    // Comparaison stricte texte
                     const alreadyExists = existingRecipes.some(existing => String(existing.id) === r.id);
                     if (alreadyExists) { skipped++; } 
                     else { existingRecipes.push(r); count++; }
@@ -153,9 +195,7 @@
                     const existingRecipes = await getRecipes();
                     let count = 0; let skipped = 0;
                     imported.forEach(r => {
-                        // FORCE L'ID EN TEXTE
                         r.id = String(r.id || Date.now());
-                        // Comparaison stricte texte
                         const alreadyExists = existingRecipes.some(existing => String(existing.id) === r.id);
                         if (alreadyExists) { skipped++; } 
                         else { existingRecipes.push(r); count++; }
@@ -168,7 +208,65 @@
             reader.readAsText(file); input.value = '';
         }
 
-        // --- INITIALISATION & SUPPRESSION (CORRIGÉE) ---
+        // --- FAVORIS ---
+        async function toggleFavorite(id, event) {
+            if(event) event.stopPropagation();
+            let recipes = await getRecipes();
+            const recipe = recipes.find(r => r.id == id);
+            if(recipe) {
+                recipe.isFavorite = !recipe.isFavorite;
+                saveRecipes(recipes);
+                renderGrid(); // Re-render sans recharger la page
+            }
+        }
+
+        // --- AFFICHAGE (AVEC FILTRES) ---
+        async function renderGrid() {
+            const grid = document.getElementById('recipe-grid');
+            const recipes = await getRecipes();
+            
+            const filteredRecipes = recipes.filter(r => {
+                // 1. Filtre Texte
+                const searchLower = currentSearch.toLowerCase();
+                const matchesSearch = r.name.toLowerCase().includes(searchLower);
+
+                // 2. Filtre Catégorie
+                let matchesFilter = false;
+                if (currentFilter === 'all') matchesFilter = true;
+                else if (currentFilter === 'favoris') matchesFilter = r.isFavorite === true;
+                else matchesFilter = r.type === currentFilter;
+
+                return matchesSearch && matchesFilter;
+            });
+
+            if (filteredRecipes.length === 0) {
+                grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Aucune recette ne correspond à votre recherche.</p>';
+                return;
+            }
+            
+            grid.innerHTML = filteredRecipes.map(r => {
+                const heartClass = r.isFavorite ? 'active' : '';
+                const heartIcon = r.isFavorite ? 'ph-heart-fill' : 'ph-heart';
+                
+                return `
+                <div class="card" onclick="window.location.href='details.html?id=${r.id}'">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <span class="tag tag-${r.type}">${r.type}</span>
+                        <button onclick="toggleFavorite('${r.id}', event)" class="btn-fav ${heartClass}">
+                            <i class="ph ${heartIcon}"></i>
+                        </button>
+                    </div>
+                    <h3>${r.name}</h3>
+                    <p style="color:var(--text-muted); font-size:0.9rem;"><i class="ph ph-clock"></i> ${r.time} min | <i class="ph ph-users"></i> ${r.servings} pers.</p>
+                    <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
+                        <a href="editor.html?id=${r.id}" class="btn btn-secondary btn-icon"><i class="ph ph-pencil"></i></a>
+                        <button onclick="deleteRecipe('${r.id}', event)" class="btn btn-danger btn-icon"><i class="ph ph-trash"></i></button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        // --- INITIALISATION ---
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme(); loadMenu();
             const sidebar = document.querySelector('.sidebar'); const overlay = document.getElementById('overlay'); const toggle = document.getElementById('menu-toggle');
@@ -177,33 +275,18 @@
             toggle.onclick = () => { if(sidebar.classList.contains('active')) closeMenu(); else openMenu(); };
             overlay.onclick = closeMenu;
 
-            const grid = document.getElementById('recipe-grid');
-            const recipes = await getRecipes();
-            if (recipes.length === 0) grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--text-muted);">Aucune recette trouvée.</p>';
-            
-            grid.innerHTML = recipes.map(r => `
-                <div class="card" onclick="window.location.href='details.html?id=${r.id}'">
-                    <span class="tag tag-${r.type}">${r.type}</span>
-                    <h3>${r.name}</h3>
-                    <p style="color:var(--text-muted); font-size:0.9rem;"><i class="ph ph-clock"></i> ${r.time} min | <i class="ph ph-users"></i> ${r.servings} pers.</p>
-                    <div style="margin-top:1rem; display:flex; gap:0.5rem; justify-content:flex-end;" onclick="event.stopPropagation()">
-                        <a href="editor.html?id=${r.id}" class="btn btn-secondary btn-icon"><i class="ph ph-pencil"></i></a>
-                        <button onclick="deleteRecipe('${r.id}', event)" class="btn btn-danger btn-icon"><i class="ph ph-trash"></i></button>
-                    </div>
-                </div>
-            `).join('');
+            // Listener Recherche
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                currentSearch = e.target.value;
+                renderGrid();
+            });
+
+            renderGrid();
 
             window.deleteRecipe = async (id, event) => {
-                // 1. Empêcher le clic de faire autre chose (nav ou propagation)
-                if(event) {
-                    event.preventDefault(); 
-                    event.stopPropagation(); 
-                }
-                
-                // 2. Confirmation
-                if(confirm('Êtes-vous sûr de vouloir supprimer cette recette ?')) { 
+                if(event) event.preventDefault();
+                if(confirm('Supprimer ?')) { 
                     let recipes = await getRecipes(); 
-                    // 3. Force la comparaison en TEXTE pour éviter les bugs 1001 vs "1001"
                     recipes = recipes.filter(r => String(r.id) !== String(id)); 
                     saveRecipes(recipes); 
                     location.reload(); 
