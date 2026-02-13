@@ -75,6 +75,8 @@
                 <span style="color:var(--text-muted); font-size:0.9rem;"><i class="ph ph-clock"></i> <span id="detail-time">0</span> min</span>
                 <span style="color:var(--text-muted); font-size:0.9rem;"><i class="ph ph-users"></i> <span id="detail-servings">0</span> pers.</span>
             </div>
+            <!-- AFFICHAGE SOURCE DYNAMIQUE -->
+            <div id="detail-source-container"></div>
         </div>
 
         <div class="card">
@@ -110,7 +112,7 @@
             loadMenu();
             const sidebar = document.querySelector('.sidebar');
             const overlay = document.getElementById('overlay');
-            const toggle = document.getElementById('menu-toggle'); // Si vous avez un bouton menu
+            const toggle = document.getElementById('menu-toggle'); 
             const closeMenu = () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); };
             const openMenu = () => { sidebar.classList.add('active'); overlay.classList.add('active'); };
             // Note: Pas de bouton toggle dans le header de cette page (on utilise Retour), mais on garde le code si besoin
@@ -146,6 +148,28 @@
             document.getElementById('detail-ingredients').innerHTML = recipe.ingredients.map(ing => 
                 `<li><strong>${ing.qty} ${ing.unit}</strong> : ${ing.name}</li>`
             ).join('');
+
+            // --- GESTION SOURCE (LIEN OU TEXTE) ---
+            const sourceContainer = document.getElementById('detail-source-container');
+            if (recipe.source) {
+                // Si ça commence par http, c'est un lien
+                if (recipe.source.startsWith('http')) {
+                    sourceContainer.innerHTML = `
+                        <div style="margin-top:1rem;">
+                            <a href="${recipe.source}" target="_blank" class="btn btn-secondary" style="font-size:0.9rem;">
+                                <i class="ph ph-link"></i> Voir la source
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    // Sinon c'est du texte
+                    sourceContainer.innerHTML = `
+                        <div style="margin-top:1rem; color:var(--text-muted); font-style:italic; display:flex; align-items:center; gap:0.5rem;">
+                            <i class="ph ph-book"></i> Source : ${recipe.source}
+                        </div>
+                    `;
+                }
+            }
         })();
 
         // --- AJOUTER AU PLAN ---
