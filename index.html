@@ -90,11 +90,17 @@
         <div class="grid" id="recipe-grid" style="margin-top: 2rem;"></div>
     </main>
 
-    <!-- MODALE EXPORT -->
+    <!-- MODALE EXPORT AVEC CHECKBOX FAV -->
     <div id="modal-export" class="modal">
         <div class="modal-content">
             <h3>Code de vos recettes</h3>
             <button onclick="closeModal('modal-export')" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+            
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; user-select:none;">
+                <input type="checkbox" id="export-fav-only" onchange="updateExportText()"> 
+                <strong>Uniquement les favoris</strong>
+            </label>
+            
             <p style="font-size:0.9rem; color:var(--text-muted);">Vous pouvez copier ce code pour le sauvegarder ailleurs, ou le télécharger en fichier.</p>
             <textarea id="export-textarea" class="code-area" readonly></textarea>
             <div style="display:flex; justify-content:flex-end; gap:1rem;">
@@ -139,13 +145,9 @@
         // --- GESTION DES FILTRES & RECHERCHE ---
         function setFilter(filterName) {
             currentFilter = filterName;
-            // Mise à jour visuelle des boutons
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('active');
-                if(btn.textContent.toLowerCase().includes(filterName === 'accompagnement' ? 'accomp' : filterName)) {
-                    btn.classList.add('active');
-                }
-                // Cas spécial pour "Tout" et "Favoris"
+                if(btn.textContent.toLowerCase().includes(filterName === 'accompagnement' ? 'accomp' : filterName)) btn.classList.add('active');
                 if(filterName === 'all' && btn.textContent === 'Tout') btn.classList.add('active');
                 if(filterName === 'favoris' && btn.textContent.includes('Favoris')) btn.classList.add('active');
             });
@@ -179,8 +181,30 @@
             } catch (e) { alert("Erreur : Le code JSON n'est pas valide."); }
         }
 
-        // --- EXPORT CODE ---
-        async function openExportCode() { const recipes = await getRecipes(); const jsonString = JSON.stringify(recipes, null, 2); document.getElementById('export-textarea').value = jsonString; openModal('modal-export'); }
+        // --- EXPORT CODE (AVEC FILTRE FAVORI) ---
+        async function updateExportText() {
+            // Appeler la même logique que l'ouverture
+            openExportCodeLogic();
+        }
+
+        async function openExportCodeLogic() {
+            const recipes = await getRecipes();
+            const favOnly = document.getElementById('export-fav-only').checked;
+            
+            let recipesToExport = recipes;
+            if (favOnly) {
+                recipesToExport = recipes.filter(r => r.isFavorite === true);
+            }
+
+            const jsonString = JSON.stringify(recipesToExport, null, 2); 
+            document.getElementById('export-textarea').value = jsonString;
+        }
+
+        async function openExportCode() {
+            openModal('modal-export');
+            await openExportCodeLogic();
+        }
+
         function copyToClipboard() { const copyText = document.getElementById("export-textarea"); copyText.select(); document.execCommand("copy"); alert("Code copié !"); }
         function downloadJSON() { const text = document.getElementById("export-textarea").value; const blob = new Blob([text], { type: "application/json" }); const anchor = document.createElement("a"); anchor.download = "mes_recettes_export.json"; anchor.href = window.URL.createObjectURL(blob); anchor.click(); anchor.remove(); }
 
@@ -216,7 +240,7 @@
             if(recipe) {
                 recipe.isFavorite = !recipe.isFavorite;
                 saveRecipes(recipes);
-                renderGrid(); // Re-render sans recharger la page
+                renderGrid();
             }
         }
 
@@ -226,16 +250,12 @@
             const recipes = await getRecipes();
             
             const filteredRecipes = recipes.filter(r => {
-                // 1. Filtre Texte
                 const searchLower = currentSearch.toLowerCase();
                 const matchesSearch = r.name.toLowerCase().includes(searchLower);
-
-                // 2. Filtre Catégorie
                 let matchesFilter = false;
                 if (currentFilter === 'all') matchesFilter = true;
                 else if (currentFilter === 'favoris') matchesFilter = r.isFavorite === true;
                 else matchesFilter = r.type === currentFilter;
-
                 return matchesSearch && matchesFilter;
             });
 
@@ -247,7 +267,6 @@
             grid.innerHTML = filteredRecipes.map(r => {
                 const heartClass = r.isFavorite ? 'active' : '';
                 const heartIcon = r.isFavorite ? 'ph-heart-fill' : 'ph-heart';
-                
                 return `
                 <div class="card" onclick="window.location.href='details.html?id=${r.id}'">
                     <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -275,7 +294,6 @@
             toggle.onclick = () => { if(sidebar.classList.contains('active')) closeMenu(); else openMenu(); };
             overlay.onclick = closeMenu;
 
-            // Listener Recherche
             document.getElementById('search-input').addEventListener('input', (e) => {
                 currentSearch = e.target.value;
                 renderGrid();
