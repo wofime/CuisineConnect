@@ -20,10 +20,10 @@
         .main-content { margin-left: 0; padding: 2rem; flex: 1; transition: margin-left 0.3s ease; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
         
-        .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; position: relative; }
-        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--primary); cursor: pointer; }
+        .card { background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; position: relative; cursor: pointer; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: var(--primary); }
         
-        /* STYLES RECHERCHE ET FILTRES */
+        /* RECHERCHE ET FILTRES */
         .search-container { background: var(--surface); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .search-input { width: 100%; padding: 0.8rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 1rem; outline: none; margin-bottom: 0.5rem; }
         .filters { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
@@ -31,13 +31,32 @@
         .filter-btn { padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 20px; background: var(--bg); color: var(--text); cursor: pointer; white-space: nowrap; transition: all 0.2s; font-size: 0.9rem; }
         .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
         
+        /* BOUTONS */
         .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; font-size: 0.9rem; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
         .btn-danger { background: #fee2e2; color: #ef4444; }
         .btn-icon { padding: 0.5rem; border-radius: 6px; }
-        .btn-fav { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem; padding: 0; transition: color 0.2s; }
-        .btn-fav.active { color: #ef4444; } /* Rouge coeur actif */
+        
+        /* BOUTON FAVORI CORRIGÉ */
+        .btn-fav { 
+            background: rgba(255,255,255,0.8); 
+            border: 1px solid var(--border); 
+            color: var(--text-muted); 
+            cursor: pointer; 
+            font-size: 1.5rem; 
+            padding: 0.2rem 0.4rem; 
+            border-radius: 50%; 
+            transition: all 0.2s; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            z-index: 10; /* Au-dessus du clic de la carte */
+            width: 40px;
+            height: 40px;
+        }
+        .btn-fav:hover { transform: scale(1.1); }
+        .btn-fav.active { color: #ef4444; background: #fee2e2; border-color: #ef4444; }
 
         .tag { padding: 0.2rem 0.6rem; border-radius: 99px; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; }
         .tag-plat { background: #d1fae5; color: #065f46; }
@@ -74,7 +93,7 @@
             </div>
         </header>
 
-        <!-- SECTION RECHERCHE ET FILTRES -->
+        <!-- RECHERCHE ET FILTRES -->
         <div class="search-container">
             <input type="text" id="search-input" class="search-input" placeholder="🔍 Rechercher une recette...">
             <div class="filters" id="filters-container">
@@ -90,17 +109,14 @@
         <div class="grid" id="recipe-grid" style="margin-top: 2rem;"></div>
     </main>
 
-    <!-- MODALE EXPORT AVEC CHECKBOX FAV -->
+    <!-- MODALE EXPORT -->
     <div id="modal-export" class="modal">
         <div class="modal-content">
             <h3>Code de vos recettes</h3>
             <button onclick="closeModal('modal-export')" style="position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.5rem; cursor:pointer;">&times;</button>
-            
             <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; user-select:none;">
-                <input type="checkbox" id="export-fav-only" onchange="updateExportText()"> 
-                <strong>Uniquement les favoris</strong>
+                <input type="checkbox" id="export-fav-only" onchange="updateExportText()"> <strong>Uniquement les favoris</strong>
             </label>
-            
             <p style="font-size:0.9rem; color:var(--text-muted);">Vous pouvez copier ce code pour le sauvegarder ailleurs, ou le télécharger en fichier.</p>
             <textarea id="export-textarea" class="code-area" readonly></textarea>
             <div style="display:flex; justify-content:flex-end; gap:1rem;">
@@ -125,11 +141,10 @@
     </div>
 
     <script>
-        // --- ETAT GLOBAL ---
         let currentFilter = 'all';
         let currentSearch = '';
 
-        // --- FONCTIONS DE BASE ---
+        // --- BASE ---
         function initTheme() { const savedTheme = localStorage.getItem('theme') || 'light'; document.body.setAttribute('data-theme', savedTheme); }
         async function loadMenu() {
             try { const response = await fetch('menu.json'); const menuItems = await response.json(); const container = document.getElementById('nav-container'); const currentPath = window.location.pathname.split('/').pop();
@@ -142,7 +157,7 @@
         }
         function saveRecipes(recipes) { localStorage.setItem('recipes', JSON.stringify(recipes)); }
 
-        // --- GESTION DES FILTRES & RECHERCHE ---
+        // --- FILTRES ---
         function setFilter(filterName) {
             currentFilter = filterName;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -154,12 +169,12 @@
             renderGrid();
         }
 
-        // --- GESTION DES MODALES ---
+        // --- MODALES ---
         function openModal(id) { document.getElementById(id).classList.add('active'); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
         window.onclick = function(event) { if (event.target.classList.contains('modal')) { event.target.classList.remove('active'); } }
 
-        // --- IMPORT CODE ---
+        // --- IMPORT ---
         function openImportCode() { document.getElementById('import-textarea').value = ""; openModal('modal-import'); }
         async function handleCodeImport() {
             const code = document.getElementById('import-textarea').value;
@@ -181,30 +196,16 @@
             } catch (e) { alert("Erreur : Le code JSON n'est pas valide."); }
         }
 
-        // --- EXPORT CODE (AVEC FILTRE FAVORI) ---
-        async function updateExportText() {
-            // Appeler la même logique que l'ouverture
-            openExportCodeLogic();
-        }
-
+        // --- EXPORT ---
+        async function updateExportText() { openExportCodeLogic(); }
         async function openExportCodeLogic() {
             const recipes = await getRecipes();
             const favOnly = document.getElementById('export-fav-only').checked;
-            
             let recipesToExport = recipes;
-            if (favOnly) {
-                recipesToExport = recipes.filter(r => r.isFavorite === true);
-            }
-
-            const jsonString = JSON.stringify(recipesToExport, null, 2); 
-            document.getElementById('export-textarea').value = jsonString;
+            if (favOnly) { recipesToExport = recipes.filter(r => r.isFavorite === true); }
+            document.getElementById('export-textarea').value = JSON.stringify(recipesToExport, null, 2);
         }
-
-        async function openExportCode() {
-            openModal('modal-export');
-            await openExportCodeLogic();
-        }
-
+        async function openExportCode() { openModal('modal-export'); await openExportCodeLogic(); }
         function copyToClipboard() { const copyText = document.getElementById("export-textarea"); copyText.select(); document.execCommand("copy"); alert("Code copié !"); }
         function downloadJSON() { const text = document.getElementById("export-textarea").value; const blob = new Blob([text], { type: "application/json" }); const anchor = document.createElement("a"); anchor.download = "mes_recettes_export.json"; anchor.href = window.URL.createObjectURL(blob); anchor.click(); anchor.remove(); }
 
@@ -232,19 +233,29 @@
             reader.readAsText(file); input.value = '';
         }
 
-        // --- FAVORIS ---
-        async function toggleFavorite(id, event) {
-            if(event) event.stopPropagation();
+        // --- FAVORIS (FONCTION CORRIGÉE ET GLOBALE) ---
+        window.toggleFavorite = async (id, event) => {
+            // 1. Bloquer le clic de la carte (ne pas aller sur la page détail)
+            if(event) {
+                event.preventDefault(); 
+                event.stopPropagation(); 
+            }
+
             let recipes = await getRecipes();
-            const recipe = recipes.find(r => r.id == id);
-            if(recipe) {
+            // Recherche sécurisée (comparaison de chaine)
+            const recipe = recipes.find(r => String(r.id) === String(id));
+            
+            if (recipe) {
+                // 2. Inverser l'état
                 recipe.isFavorite = !recipe.isFavorite;
+                // 3. Sauvegarder
                 saveRecipes(recipes);
+                // 4. Rafraichir l'affichage immédiatement pour voir le changement de couleur
                 renderGrid();
             }
-        }
+        };
 
-        // --- AFFICHAGE (AVEC FILTRES) ---
+        // --- AFFICHAGE ---
         async function renderGrid() {
             const grid = document.getElementById('recipe-grid');
             const recipes = await getRecipes();
@@ -267,11 +278,14 @@
             grid.innerHTML = filteredRecipes.map(r => {
                 const heartClass = r.isFavorite ? 'active' : '';
                 const heartIcon = r.isFavorite ? 'ph-heart-fill' : 'ph-heart';
+                
                 return `
                 <div class="card" onclick="window.location.href='details.html?id=${r.id}'">
                     <div style="display:flex; justify-content:space-between; align-items:start;">
                         <span class="tag tag-${r.type}">${r.type}</span>
-                        <button onclick="toggleFavorite('${r.id}', event)" class="btn-fav ${heartClass}">
+                        
+                        <!-- BOUTON FAVORI CLAIR ET GROS -->
+                        <button type="button" onclick="toggleFavorite('${r.id}', event)" class="btn-fav ${heartClass}">
                             <i class="ph ${heartIcon}"></i>
                         </button>
                     </div>
@@ -285,7 +299,7 @@
             `}).join('');
         }
 
-        // --- INITIALISATION ---
+        // --- INIT ---
         document.addEventListener('DOMContentLoaded', async () => {
             initTheme(); loadMenu();
             const sidebar = document.querySelector('.sidebar'); const overlay = document.getElementById('overlay'); const toggle = document.getElementById('menu-toggle');
